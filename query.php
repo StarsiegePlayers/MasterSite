@@ -1,8 +1,14 @@
 <?php
-
-//const MASTER_SERVER = "starsiege1.no-ip.org";
-const MASTER_SERVER = "master2.starsiege.pw";
-const MASTER_PORT = 29000;
+$masters = [
+    [
+        "server"    => "master2.starsiege.pw",
+        "port"      => 29000,
+    ],
+    [
+        "server"    => "starsiege1.no-ip.org",
+        "port"      => 29000
+    ],
+];
 
 const PROTOCOL_VERSION = 0x10;
 const STATUS_REQUEST = 0x03;
@@ -11,18 +17,24 @@ const MASTER_SERVER_STATUS_RESPONSE = 0x06;
 const GAME_INFO_REQUEST = 0x07;
 const GAME_INFO_RESPONSE = 0x08;
 
-$query = queryMasterServer(MASTER_SERVER, MASTER_PORT);
+$masterData = [];
 
-if (count($query['servers']) <= 0) {
-    printf("Error server count was 0");
-    exit;
+foreach ($masters as $master) {
+    $query = queryMasterServer($master['server'], $master['port']);
+
+    if (count($query['servers']) <= 0) {
+        printf("Error server count was 0");
+        exit;
+    }
+    printf("Acquired %d servers in %s s\n", count($query['servers']), $query['request_duration']);
+
+    $masterData = array_merge($masterData, $query["servers"]);
 }
-printf("Acquired %d servers in %s s\n", count($query['servers']), $query['request_duration']);
 
 
 $gameServers = [];
 $start = microtime(true);
-foreach ($query['servers'] as $id => $server) {
+foreach ($masterData as $id => $server) {
     $gsinfo = queryGameServers($server["host"], $server["port"], $id);
     if ($gsinfo !== false) {
         $gameServers[] = $gsinfo;
