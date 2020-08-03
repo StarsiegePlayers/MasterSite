@@ -35,56 +35,56 @@ print_r($gameServers);
 
 
 function queryMasterServer($host, $port, $requestID = 0) {
-	$fp = @fsockopen("udp://".$host, $port, $errno, $errstr, 1);
+    $fp = @fsockopen("udp://".$host, $port, $errno, $errstr, 1);
     if (!$fp)
     {
         printf("Error opening socket to: %s:%d\nError#:%d\nError:%s", $host, $port, $errno, $errstr);
         return [];
     }
 
-	//time the search
-	$start = microtime(true);
+    //time the search
+    $start = microtime(true);
 
-	//request server info
+    //request server info
     $request = pack("C4v2", PROTOCOL_VERSION, STATUS_REQUEST, 0xff, 0x00, $requestID, 0x00);
-	fwrite($fp, $request, 8);
-	$packet = [];
-	$packet['header'] = fread($fp, 8);
-	$packet['hostname_length'] = fread($fp, 1);
-	$packet['motd'] = "";
-	do {
-		$byte = fread($fp, 1);
-		if (ord($byte) > 0) {
-			$packet['motd'] .= $byte;
-		}
-	}
-	while (ord($byte) != 0);
-
-	// handle multiple nulls after string
-	do {
-	    $serverCount = ord(fread($fp, 1));
+    fwrite($fp, $request, 8);
+    $packet = [];
+    $packet['header'] = fread($fp, 8);
+    $packet['hostname_length'] = fread($fp, 1);
+    $packet['motd'] = "";
+    do {
+        $byte = fread($fp, 1);
+        if (ord($byte) > 0) {
+            $packet['motd'] .= $byte;
+        }
     }
-	while ($serverCount == 0);
+    while (ord($byte) != 0);
+
+    // handle multiple nulls after string
+    do {
+        $serverCount = ord(fread($fp, 1));
+    }
+    while ($serverCount == 0);
     $packet['server_count'] = $serverCount;
 
-	$packet['servers'] = [];
-	for ($i=0; $i < $packet['server_count']; $i++) {
-		fread($fp, 1); // separator \0x06
+    $packet['servers'] = [];
+    for ($i=0; $i < $packet['server_count']; $i++) {
+        fread($fp, 1); // separator \0x06
 
-		$ip = sprintf("%d.%d.%d.%d", unpack("C", fread($fp, 1))[1], unpack("C", fread($fp, 1))[1], unpack("C", fread($fp, 1))[1], unpack("C", fread($fp, 1))[1]);
-		if ($ip == "127.0.0.1") { // discard gameservers reporting as localhost
+        $ip = sprintf("%d.%d.%d.%d", unpack("C", fread($fp, 1))[1], unpack("C", fread($fp, 1))[1], unpack("C", fread($fp, 1))[1], unpack("C", fread($fp, 1))[1]);
+        if ($ip == "127.0.0.1") { // discard gameservers reporting as localhost
             fread($fp, 2); // discard the localhost server port
-		    continue;
+            continue;
         }
         $packet['servers'][$i]["host"] = $ip;
-		$packet['servers'][$i]["port"] = unpack("v", fread($fp, 2))[1];
-	}
+        $packet['servers'][$i]["port"] = unpack("v", fread($fp, 2))[1];
+    }
 
-	$end = microtime(true);
-	$packet['request_duration'] = $end - $start;
+    $end = microtime(true);
+    $packet['request_duration'] = $end - $start;
 
-	fclose($fp);
-	return $packet;
+    fclose($fp);
+    return $packet;
 }
 
 function queryGameServers($host, $port, $requestID = 0) {
