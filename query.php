@@ -38,7 +38,7 @@ foreach ($masters as $master) {
         printf("Error server count was 0");
         exit;
     }
-    printf("Acquired %d servers in %s s\n", count($query['servers']), $query['request_duration']);
+    printf("Acquired %d servers in %s ms\n", count($query['servers']), $query['ping']);
 
     foreach ($query['servers'] as $server) {
         $uniqueID = sprintf("%s:%s", $server["host"], $server['port']);
@@ -48,15 +48,16 @@ foreach ($masters as $master) {
 
 $gameServers = [];
 $start = microtime(true);
-foreach ($masterData as $id => $server) {
-    $gsinfo = queryGameServers($server["host"], $server["port"], $id);
+$id = 0;
+foreach ($masterData as $server) {
+    $gsinfo = queryGameServers($server["host"], $server["port"], ++$id);
     if ($gsinfo !== false) {
         $gameServers[] = $gsinfo;
     }
 }
 $end = microtime(true);
 
-printf("Queried %d servers in %s s\n", count($gameServers), $end - $start);
+printf("Queried %d servers in %s ms\n", count($gameServers), $end - $start);
 print_r($gameServers);
 
 
@@ -67,6 +68,7 @@ function queryMasterServer($host, $port, $requestID = 0) {
         printf("Error opening socket to: %s:%d\nError#:%d\nError:%s", $host, $port, $errno, $errstr);
         return [];
     }
+    socket_set_timeout($fp, 1);
 
     //time the search
     $start = microtime(true);
@@ -107,7 +109,7 @@ function queryMasterServer($host, $port, $requestID = 0) {
     }
 
     $end = microtime(true);
-    $packet['request_duration'] = $end - $start;
+    $packet['ping'] = round((($end - $start)*1000), 0);
 
     fclose($fp);
     return $packet;
@@ -131,10 +133,14 @@ function queryGameServers($host, $port, $requestID = 0) {
     $request = pack("C4v2", PROTOCOL_VERSION, STATUS_REQUEST, 0xff, 0x00, $requestID, 0x00);
     fwrite($fp, $request, 8);
 
-    // fixed packet size: 40 bytes
     $packet['host']         = sprintf('%s:%s', $host, $port);
-    $packet['header']       = fread($fp, 06); // header (6 bytes)
-    $packet['game_type']    = fread($fp, 07); // game type (7 bytes) "@\x00es3a\x06"
+
+    // fixed packet size: 40 bytes
+    $packet['header']       = bin2hex(fread($fp, 06)); // header (6 bytes) (PROTOCOL_VERSION, GAME_SERVER_STATUS_RESPONSE, 0xff, 0xfd, $requestID, 0x00)
+    $packet['max_players']  = ord(fread($fp, 01));
+    $packet['players']      = ord(fread($fp, 01));
+    $packet['game_type']    = fread($fp, 04); // game type (4 bytes) "es3a"
+    $packet['password']     = bin2hex(fread($fp, 01));
     $packet['version']      = fread($fp, 10); // game server version string (10 bytes)
     $packet['server_name']  = ""; // server name (17 bytes max) null terminated
     do {
@@ -151,7 +157,7 @@ function queryGameServers($host, $port, $requestID = 0) {
     }
 
     $end = microtime(true);
-    $packet["request_duration"] = $end - $start;
+    $packet["ping"] = round((($end - $start)*1000), 0);
     fclose($fp);
 
 //    $packet["info"] = queryGameServerInfo($host, $port, ++$requestID);
