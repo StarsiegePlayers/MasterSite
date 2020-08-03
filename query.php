@@ -6,7 +6,19 @@ $masters = [
     ],
     [
         "server"    => "starsiege1.no-ip.org",
-        "port"      => 29000
+        "port"      => 29000,
+    ],
+    [
+        "server"    => "master1.starsiege.io",
+        "port"      => 29000,
+    ],
+    [
+        "server"    => "master3.starsiege.io",
+        "port"      => 29000,
+    ],
+    [
+        "server"    => "starsiege.noip.us",
+        "port"      => 29000,
     ],
 ];
 
@@ -44,7 +56,7 @@ foreach ($masterData as $id => $server) {
 }
 $end = microtime(true);
 
-printf("Queried %d servers in %s s\n", count($query['servers']), $end - $start);
+printf("Queried %d servers in %s s\n", count($gameServers), $end - $start);
 print_r($gameServers);
 
 
