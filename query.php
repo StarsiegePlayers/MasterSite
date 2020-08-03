@@ -28,9 +28,11 @@ foreach ($masters as $master) {
     }
     printf("Acquired %d servers in %s s\n", count($query['servers']), $query['request_duration']);
 
-    $masterData = array_merge($masterData, $query["servers"]);
+    foreach ($query['servers'] as $server) {
+        $uniqueID = sprintf("%s:%s", $server["host"], $server['port']);
+        $masterData[$uniqueID] = $server;
+    }
 }
-
 
 $gameServers = [];
 $start = microtime(true);
