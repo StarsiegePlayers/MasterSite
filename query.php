@@ -30,6 +30,15 @@ const MASTER_SERVER_STATUS_RESPONSE = 0x06;
 const GAME_INFO_REQUEST = 0x07;
 const GAME_INFO_RESPONSE = 0x08;
 
+const GAME_STATUS_PROTECTED = 0b00000001;
+const GAME_STATUS_DEDICATED = 0b00000010;
+const GAME_STATUS_UNKNOWN1 = 0b00000100; // always on for some reason
+const GAME_STARTED = 0b00001000;
+const GAME_DYNAMIX_LOGO = 0b00010000;
+const GAME_WON_LOGO = 0b00100000;
+const GAME_STATUS_UNKNOWN2 = 0b01000000;
+const GAME_STATUS_UNKNOWN3 = 0b10000000;
+
 $masterData = [];
 
 foreach ($masters as $master) {
@@ -79,7 +88,9 @@ function queryMasterServer($host, $port, $requestID = 0)
     fwrite($fp, $request, 8);
 
     $packet = [];
-    $packet['header'] = fread($fp, 8);
+    $packet['header'] = bin2hex(
+        fread($fp, 8)
+    ); // PROTOCOL_VERSION, MASTER_SERVER_STATUS_RESPONSE, 0x01, 0x01, 0x45, 0x00, 0x00, 0x02
     $packet['hostname_length'] = fread($fp, 1);
     $packet['motd'] = "";
 
@@ -150,7 +161,7 @@ function queryGameServers($host, $port, $requestID = 0)
     $packet['max_players'] = ord(fread($fp, 01));
     $packet['players'] = ord(fread($fp, 01));
     $packet['game_type'] = fread($fp, 04); // game type (4 bytes) "es3a"
-    $packet['password'] = bin2hex(fread($fp, 01));
+    $packet['status_bytes'] = parseGameServerStatusResponseBytes(ord(fread($fp, 01)));
     $packet['version'] = fread($fp, 10); // game server version string (10 bytes)
     $packet['server_name'] = ""; // server name (17 bytes max) null terminated
     do {
@@ -173,6 +184,24 @@ function queryGameServers($host, $port, $requestID = 0)
     return $packet;
 }
 
+function parseGameServerStatusResponseBytes($bytesIn)
+{
+    $out = [
+        "protected" => (GAME_STATUS_PROTECTED & $bytesIn) ? true : false,
+        "dedicated" => (GAME_STATUS_DEDICATED & $bytesIn) ? true : false,
+        "unknown1" => (GAME_STATUS_UNKNOWN1 & $bytesIn) ? true : false,
+        "started" => (GAME_STARTED & $bytesIn) ? true : false,
+        "dynamix" => (GAME_DYNAMIX_LOGO & $bytesIn) ? true : false,
+        "won" => (GAME_WON_LOGO & $bytesIn) ? true : false,
+        "unknown2" => (GAME_STATUS_UNKNOWN2 & $bytesIn) ? true : false,
+        "unknown3" => (GAME_STATUS_UNKNOWN3 & $bytesIn) ? true : false,
+    ];
+    if ($out["dedicated"] === false && ($out["dynamix"] === true || $out["won"] === true)) {
+        $out["dynamix"] = false;
+        $out["won"] = false;
+    }
+    return $out;
+}
 
 function queryGameServerInfo($host, $port, $requestID = 0)
 {
