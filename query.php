@@ -1,5 +1,6 @@
 <?php
 
+//const MASTER_SERVER = "starsiege1.no-ip.org";
 const MASTER_SERVER = "master2.starsiege.pw";
 const MASTER_PORT = 29000;
 
@@ -59,7 +60,13 @@ function queryMasterServer($host, $port, $requestID = 0) {
 	}
 	while (ord($byte) != 0);
 
-	$packet['server_count'] = ord(fread($fp, 1));
+	// handle multiple nulls after string
+	do {
+	    $serverCount = ord(fread($fp, 1));
+    }
+	while ($serverCount == 0);
+    $packet['server_count'] = $serverCount;
+
 	$packet['servers'] = [];
 	for ($i=0; $i < $packet['server_count']; $i++) {
 		fread($fp, 1); // separator \0x06
