@@ -1,16 +1,15 @@
 <?php
 
+// set_time_limit (60);
+
 $masters = [
-    [
-        "server" => "master2.starsiege.pw",
-        "port" => 29000,
-    ],
-    [
-        "server" => "starsiege1.no-ip.org",
-        "port" => 29000,
-    ],
+
     [
         "server" => "master1.starsiege.io",
+        "port" => 29000,
+    ],
+    [
+        "server" => "master2.starsiege.pw",
         "port" => 29000,
     ],
     [
@@ -18,9 +17,17 @@ $masters = [
         "port" => 29000,
     ],
     [
-        "server" => "starsiege.noip.us",
+        "server" => "starsiege1.no-ip.org",
         "port" => 29000,
-    ],
+    ],/*
+    [
+        "server"    => "starsiege.noip.us",
+        "port"      => 29000,
+    ], 
+    [
+        "server"    => "154.0.175.219",
+        "port"      => 29000,
+    ], */
 ];
 
 const PROTOCOL_VERSION = 0x10;
@@ -40,15 +47,17 @@ const GAME_STATUS_UNKNOWN2 = 0b01000000;
 const GAME_STATUS_UNKNOWN3 = 0b10000000;
 
 $masterData = [];
+$masterServer = [];
 
 foreach ($masters as $master) {
+    // printf("probing {$master['server']}");
     $query = queryMasterServer($master['server'], $master['port']);
-
+    $masterServer[] = $query;
     if (count($query['servers']) <= 0) {
         printf("Error server count was 0");
         exit;
     }
-    printf("Acquired %d servers in %s ms\n", count($query['servers']), $query['ping']);
+    // printf("Acquired %d servers in %s ms\n", count($query['servers']), $query['ping']);
 
     foreach ($query['servers'] as $server) {
         $uniqueID = sprintf("%s:%s", $server["host"], $server['port']);
@@ -67,8 +76,8 @@ foreach ($masterData as $server) {
 }
 $end = microtime(true);
 
-printf("Queried %d servers in %s ms\n", count($gameServers), $end - $start);
-print_r($gameServers);
+// printf("Queried %d servers in %s ms\n", count($gameServers), $end - $start);
+// print_r($gameServers);
 
 
 function queryMasterServer($host, $port, $requestID = 0)
@@ -142,7 +151,7 @@ function queryGameServers($host, $port, $requestID = 0)
     }
     socket_set_timeout($fp, 1);
 
-    printf("\tQuerying %s:%d\n", $host, $port);
+    // printf("\tQuerying %s:%d\n", $host, $port);
 
     //time the search
     $start = microtime(true);
@@ -212,7 +221,7 @@ function queryGameServerInfo($host, $port, $requestID = 0)
     }
     socket_set_timeout($fp, 1);
 
-    printf("\tGameinfo Request %s:%d\n", $host, $port);
+    // printf("\tGameinfo Request %s:%d\n", $host, $port);
 
     //time the search
     $start = microtime(true);
