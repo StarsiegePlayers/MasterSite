@@ -1,7 +1,11 @@
 <?php
-(include_once ('query.php')) or die("Fatal Error: Can't load query script.");
-?>
-<!DOCTYPE html>
+$file = 'query.php';
+if (is_file($file)) {
+    include_once($file);
+} else {
+    die("Can't load $file");
+}
+?><!DOCTYPE html>
 <html>
 <head>
 <title>Starsiege Servers</title>

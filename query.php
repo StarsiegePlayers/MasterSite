@@ -8,7 +8,7 @@ $masterServer = [];
 
 foreach ($masters as $master) {
     if (DEBUG)
-        printf("probing {$master['server']}");
+        printf("Probing %s\t", $master['server']);
 
     $query = queryMasterServer($master['server'], $master['port']);
     $masterServer[] = $query;
